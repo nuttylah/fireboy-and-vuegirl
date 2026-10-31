@@ -1,52 +1,231 @@
 <!--
-  CHECKPOINT 0 — STARTER
-  This is plain HTML: nothing here is reactive yet.
-  Over the workshop you'll turn every hard-coded value into Vue state.
+  CHECKPOINT 6 — Lifecycle hooks (onMounted)
+  New: onMounted() to load saved data and focus the input once the page is on screen.
+
+  Functions in this checkpoint: addTodo, toggleTodo, removeTodo, clearDone
+  (same four; each one now also saves the list to localStorage as its last line)
 -->
 <script setup>
-// CP1: import { ref, reactive } from 'vue' and create your state here.
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import TodoItem from './components/TodoItem.vue'
+import TodoFilters from './components/TodoFilters.vue'
+import {
+  doc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  serverTimestamp
+} from 'firebase/firestore'
+import { auth, db, todosCol } from './firebase'
+import LoginForm from './components/LoginForm.vue'
+
+const title = ref('My Todo List')
+// REMOVE: const user = reactive({ name: 'Student', streak: 1 })
+const user = ref(null)          // the real Firebase user, or null
+const authReady = ref(false)    // false until Firebase knows whether you're signed in
+// const DEFAULT_TODOS = [
+//   { id: 1, text: 'Learn ref()', note: '', important: false, done: false },
+//   { id: 2, text: 'Install Node.js', note: 'Use the LTS version', important: false, done: true },
+//   { id: 3, text: 'Build a todo app', note: '', important: true, done: false },
+// ]
+
+// Start EMPTY. The data arrives in onMounted, just like data from a server will.
+const todos = ref([])
+
+const showTips = ref(false)
+
+const newText = ref('')
+const newNote = ref('')
+const newImportant = ref(false)
+
+// A "template ref": Vue puts the real <input> element in here after mounting
+const inputEl = ref(null)
+
+const filter = ref('all')
+
+const remaining = computed(() => todos.value.filter((t) => !t.done).length)
+const doneCount = computed(() => todos.value.length - remaining.value)
+const canAdd = computed(() => newText.value.trim().length > 0)
+
+const visibleTodos = computed(() => {
+  if (filter.value === 'active') return todos.value.filter((t) => !t.done)
+  if (filter.value === 'done') return todos.value.filter((t) => t.done)
+  return todos.value
+})
+
+console.log('1. setup runs: the component is being created (not on screen yet)')
+
+let stopListening = null
+let stopAuth = null
+let stopTodos = null
+
+// Check Firebase login status when the component is mounted
+onMounted(() => {
+  console.log('2. Component mounted!')
+
+  stopAuth = onAuthStateChanged(auth, (u) => {
+    user.value = u
+    authReady.value = true
+  })
+})
+
+// Listen for changes whenever the user logs in or logs out
+watch(user, async (u) => {
+
+  // Stop the previous Firestore listener
+  if (stopTodos) {
+    stopTodos()
+    stopTodos = null
+  }
+  // Clear previous user's todos
+  todos.value = []
+  // If nobody is logged in, stop here
+  if (!u) return
+  // Get only the logged-in user's todos
+  const q = query(
+    todosCol,
+    where('uid', '==', u.uid),
+    orderBy('createdAt')
+  )
+
+  // Listen for real-time Firestore updates
+  stopTodos = onSnapshot(
+    q,
+    (snap) => {
+      todos.value = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }))
+    },
+    (err) => {
+      console.error('Could not load todos:', err.message)
+    }
+  )
+
+  // Focus the input after the logged-in interface appears
+  await nextTick()
+  inputEl.value?.focus()
+
+})
+
+// Clean up listeners when leaving the page
+onUnmounted(() => {
+  if (stopAuth) stopAuth()
+  if (stopTodos) stopTodos()
+})
+
+// Logout function
+function logout() {
+  signOut(auth)
+}
+   const q = query(todosCol, orderBy('createdAt'))
+   stopListening = onSnapshot(
+    q,
+    (snap) => {
+      todos.value = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    },
+    (err) => console.error('Could not load todos:', err.message),
+  )
+
+onUnmounted(() => stopListening?.())
+
+
+function addTodo() {
+  if (newText.value.trim() === '') return
+
+  const newTodo = {
+  text: newText.value.trim(),
+  note: newNote.value.trim(),
+  important: newImportant.value,
+  done: false,
+  uid: user.value.uid,          // NEW: whose todo this is
+  createdAt: serverTimestamp(),
+}
+  newText.value = ''
+  newNote.value = ''
+  newImportant.value = false
+
+  addDoc(todosCol, newTodo)
+}
+
+function toggleTodo(id) {
+  const todo = todos.value.find((t) => t.id === id)
+  updateDoc(doc(db, 'todos', id), { done: !todo.done })
+}
+
+function removeTodo(id) {
+  deleteDoc(doc(db, 'todos', id))
+}
+
+
+function clearDone() {
+  const batch = writeBatch(db)
+  todos.value
+    .filter((t) => t.done)
+    .forEach((t) => batch.delete(doc(db, 'todos', t.id)))
+  batch.commit()
+}
+
 </script>
 
 <template>
   <div class="app">
     <div class="card">
-      <!-- CP1: replace the hard-coded title, name and count with {{ }} -->
-      <h1>My Todo List</h1>
-      <p class="sub">Hello, Student! You have 3 tasks.</p>
+      <h1>{{ title }}</h1>
 
-      <!-- CP3: make this form work with v-model -->
-      <div class="row">
-        <input type="text" placeholder="What needs doing?" />
-        <button class="primary">Add</button>
+      <p v-if="!authReady" class="sub">Checking login status...</p>
+      <LoginForm v-else-if="!user" />
+      <div v-else>
+        <button class="link logout" @click="logout">Log out</button>
+
+        <p class="sub">
+          Hello, {{ user.displayName || user.email }}!
+          {{ remaining }} of {{ todos.length }} tasks left.
+        </p>
+      <div class="toolbar">
+        <button class="link" @click="showTips = !showTips">
+          {{ showTips ? 'Hide' : 'Show' }} tips
+        </button>
+      </div>
+      <div v-show="showTips" class="tips">
+        Tip: refresh the page. Your tasks are still here.
       </div>
 
-      <!-- CP2: render this list from an array with v-for -->
-      <ul class="list">
-        <li class="item">
-          <input type="checkbox" />
-          <span class="text">Learn ref()</span>
-          <button class="remove">✕</button>
-        </li>
-        <li class="item done">
-          <input type="checkbox" checked />
-          <span class="text">Install Node.js</span>
-          <button class="remove">✕</button>
-        </li>
-        <li class="item">
-          <input type="checkbox" />
-          <span class="text">Build a todo app</span>
-          <button class="remove">✕</button>
-        </li>
-      </ul>
-
-      <!-- CP4: real counts and working filters with computed() -->
-      <div class="footer">
-        <span>2 items left</span>
-        <div class="filters">
-          <button class="active">All</button>
-          <button>Active</button>
-          <button>Done</button>
+      <form @submit.prevent="addTodo">
+        <div class="row">
+          <input ref="inputEl" v-model="newText" type="text" placeholder="What needs doing?" />
+          <button class="primary" type="submit" :disabled="!canAdd">Add</button>
         </div>
+        <textarea v-model="newNote" rows="2" placeholder="Notes (optional)"></textarea>
+        <label class="check">
+          <input v-model="newImportant" type="checkbox" /> Important
+        </label>
+      </form>
+
+      <ul v-if="visibleTodos.length > 0" class="list">
+        <TodoItem
+          v-for="todo in visibleTodos"
+          :key="todo.id"
+          :todo="todo"
+          @toggle="toggleTodo"
+          @remove="removeTodo"
+        />
+      </ul>
+      <p v-else class="empty">Nothing here for "{{ filter }}".</p>
+
+      <TodoFilters
+        :filter="filter"
+        :remaining="remaining"
+        :done-count="doneCount"
+        @change-filter="filter = $event"
+        @clear-done="clearDone"
+      />
       </div>
     </div>
   </div>
