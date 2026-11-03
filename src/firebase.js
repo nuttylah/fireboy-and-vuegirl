@@ -23,3 +23,4 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const todosCol = collection(db, 'todos');
 export const auth = getAuth(app);
+// ni nota saya

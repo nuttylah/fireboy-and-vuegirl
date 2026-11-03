@@ -1,10 +1,4 @@
-<!--
-  CHECKPOINT 6 — Lifecycle hooks (onMounted)
-  New: onMounted() to load saved data and focus the input once the page is on screen.
 
-  Functions in this checkpoint: addTodo, toggleTodo, removeTodo, clearDone
-  (same four; each one now also saves the list to localStorage as its last line)
--->
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
@@ -162,7 +156,6 @@ function toggleTodo(id) {
 function removeTodo(id) {
   deleteDoc(doc(db, 'todos', id))
 }
-
 
 function clearDone() {
   const batch = writeBatch(db)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Vue Todo Workshop 📝
 
 Build a todo app step by step and learn the core of Vue 3 along the way.
@@ -87,3 +88,6 @@ You can always check the answer by changing the branch.
 - Add a search box: a `computed` that filters by text.
 - Sort important tasks to the top.
 - Show a 🎉 message when every task is done.
+=======
+# fireboy-and-vuegirl
+>>>>>>> 41da964b8fbf2a349523619264d4c24aac19ba4b

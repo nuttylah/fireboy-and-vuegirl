@@ -1,6 +1,6 @@
 /* Shared styles for every checkpoint. Students don't need to edit this. */
 :root {
-  --bg: #f6f7fb; --card: #fff; --ink: #1f2330; --muted: #6b7183; --line: #e3e6ee;
+  --bg: #ac8351; --card: #fff; --ink: #1f2330; --muted: #6b7183; --line: #e3e6ee;
   --accent: #3b82f6; --bad: #dc2626;
 }
 * { box-sizing: border-box; }
@@ -18,7 +18,7 @@ textarea { width: 100%; margin-top: 8px; resize: vertical; }
 
 button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; font: inherit; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+button.active { background: var(--ink); border-color: var(--ink); color: #c889bc; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 button.link { border: none; background: none; color: var(--accent); padding: 4px; }
 
@@ -36,6 +36,6 @@ button.link { border: none; background: none; color: var(--accent); padding: 4px
 .filters { display: flex; gap: 4px; }
 .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
 
-.tips { background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: .9rem; }
+.tips { background: #b02d8b; border: 1px solid #bfdbfe; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: .9rem; }
 .banner { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
 .banner.error { background: #fef2f2; border: 1px solid #fecaca; color: var(--bad); }
